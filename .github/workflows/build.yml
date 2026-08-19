@@ -18,10 +18,20 @@ jobs:
       with:
         python-version: '3.10'
 
+    - name: Cache Buildozer and Android SDK
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.buildozer
+          .buildozer
+        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+        restore-keys: |
+          ${{ runner.os }}-buildozer-
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y -qq build-essential ccache git libffi-dev libssl-dev python3-dev zip unzip openjdk-17-jdk
+        sudo apt-get install -y build-essential ccache git libffi-dev libssl-dev python3-dev zip unzip openjdk-17-jdk
 
     - name: Install exact Python tools
       run: |
@@ -29,23 +39,28 @@ jobs:
         pip install "cython==0.29.36"
         pip install "buildozer==1.5.0"
 
-    - name: Prepare buildozer.spec
+    - name: Prepare buildozer.spec and Auto-Accept Licenses
       run: |
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
+        # تعديلات الملف لضمان التوافقية
         sed -i 's/requirements = python3,kivy,android/requirements = python3,kivy/g' buildozer.spec
         sed -i 's/requirements = python3,kivy/requirements = python3,kivy==2.2.1/g' buildozer.spec
-        sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
-        sed -i 's/android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
         sed -i 's/android.archs = arm64-v8a, armeabi-v7a/android.archs = arm64-v8a/g' buildozer.spec
         sed -i 's/# android.ndk = 25b/android.ndk = 25b/g' buildozer.spec
+        
+        # حيلة قبول الرخص الذاتية قبل التجميع لمنع التعلق
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
 
-    - name: Build APK (Non-Interactive)
+    - name: Build APK
       run: |
-        # الموافقة التلقائية على جميع شروط الـ SDK والتراخيص لتفادي التعلق
+        export PATH=$PATH:~/.local/bin
+        # الحيلة القاضية: تمرير الموافقة التلقائية لأي سؤال تفاعلي أثناء البناء
         yes | buildozer -v android debug
-
+        
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
