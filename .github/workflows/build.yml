@@ -35,22 +35,21 @@ jobs:
 
     - name: Install exact Python tools
       run: |
-        python -m pip install --upgrade "pip<24.1" setuptools
+        python -m pip install --upgrade "pip<24.1" "setuptools<69.0.0" "wheel"
         pip install "cython==0.29.36"
         pip install "buildozer==1.5.0"
 
-    - name: Prepare buildozer.spec and Auto-Accept Licenses
+    - name: Prepare buildozer.spec
       run: |
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
-        # تعديلات الملف لضمان التوافقية
-        sed -i 's/requirements = python3,kivy,android/requirements = python3,kivy/g' buildozer.spec
-        sed -i 's/requirements = python3,kivy/requirements = python3,kivy==2.2.1/g' buildozer.spec
+        # إجبار التجميع على استخدام Python 3.10 المستقرة وتفادي 3.14
+        sed -i 's/requirements = python3,kivy,android/requirements = python3==3.10.12,kivy==2.2.1/g' buildozer.spec
+        sed -i 's/requirements = python3,kivy/requirements = python3==3.10.12,kivy==2.2.1/g' buildozer.spec
         sed -i 's/android.archs = arm64-v8a, armeabi-v7a/android.archs = arm64-v8a/g' buildozer.spec
         sed -i 's/# android.ndk = 25b/android.ndk = 25b/g' buildozer.spec
         
-        # حيلة قبول الرخص الذاتية قبل التجميع لمنع التعلق
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
         sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
@@ -58,9 +57,8 @@ jobs:
     - name: Build APK
       run: |
         export PATH=$PATH:~/.local/bin
-        # الحيلة القاضية: تمرير الموافقة التلقائية لأي سؤال تفاعلي أثناء البناء
         yes | buildozer -v android debug
-        
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
