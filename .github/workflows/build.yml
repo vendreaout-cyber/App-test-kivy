@@ -18,17 +18,6 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Cache Buildozer and Android SDK
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.buildozer
-          .buildozer
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-
-
-    # 1. تثبيت حزم النظام الشاملة لـ Ubuntu 22.04 لمنع أي نقص
     - name: Install complete system dependencies
       run: |
         sudo apt-get update
@@ -43,20 +32,20 @@ jobs:
         pip install "cython==0.29.36"
         pip install "buildozer==1.5.0"
 
-    # 2. إنشاء buildozer.spec وتعديله بشكل صريح ومضمون
     - name: Prepare buildozer.spec safely
       run: |
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
         
-        # استخدام مرونة أكبر في sed للتعامل مع المسافات
-        sed -i -E 's/^#?[[:space:]]*requirements[[:space:]]*=.*/requirements = python3==3.10.12,kivy==2.2.1/g' buildozer.spec
+        # ضبط التبعيات وتحديد NDK 25b صراحة لتفادي r28c
+        sed -i -E 's/^#?[[:space:]]*requirements[[:space:]]*=.*/requirements = python3,kivy==2.2.1/g' buildozer.spec
         sed -i -E 's/^#?[[:space:]]*android.accept_sdk_license[[:space:]]*=.*/android.accept_sdk_license = True/g' buildozer.spec
         sed -i -E 's/^#?[[:space:]]*android.archs[[:space:]]*=.*/android.archs = arm64-v8a/g' buildozer.spec
+        sed -i -E 's/^#?[[:space:]]*android.ndk_path[[:space:]]*=.*/# android.ndk_path =/g' buildozer.spec
         sed -i -E 's/^#?[[:space:]]*android.ndk[[:space:]]*=.*/android.ndk = 25b/g' buildozer.spec
+        sed -i -E 's/^#?[[:space:]]*android.ndk_version[[:space:]]*=.*/android.ndk_version = 25b/g' buildozer.spec
         
-        # تجهيز مجلدات الترخيص تلقائياً
         mkdir -p ~/.android
         touch ~/.android/repositories.cfg
 
