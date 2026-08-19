@@ -23,19 +23,21 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential ccache git libffi-dev libssl-dev python3-dev zip unzip openjdk-17-jdk
 
-    - name: Install Python dependencies
+    - name: Install exact Python tools
       run: |
-        pip install --upgrade pip setuptools
-        pip install "cython==0.29.33"
-        pip install buildozer
+        python -m pip install --upgrade "pip<24.1" setuptools
+        pip install "cython==0.29.36"
+        pip install "buildozer==1.5.0"
 
-    - name: Prepare Buildozer Spec
+    - name: Prepare buildozer.spec
       run: |
         if [ ! -f buildozer.spec ]; then
           buildozer init
         fi
-        sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
+        # إزالة أي طلب لمكتبة android غير الموجودة في PyPI
+        sed -i 's/requirements = python3,kivy,android/requirements = python3,kivy/g' buildozer.spec
         sed -i 's/requirements = python3,kivy/requirements = python3,kivy==2.2.1/g' buildozer.spec
+        sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec
         sed -i 's/android.archs = arm64-v8a, armeabi-v7a/android.archs = arm64-v8a/g' buildozer.spec
         sed -i 's/# android.ndk = 25b/android.ndk = 25b/g' buildozer.spec
 
@@ -43,7 +45,7 @@ jobs:
       run: |
         buildozer -v android debug
 
-    - name: Upload APK Artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
